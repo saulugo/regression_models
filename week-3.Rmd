@@ -1,0 +1,38 @@
+---
+title: "Regression Models Wee-3"
+author: "Saul Lugo"
+date: "December 25, 2015"
+output: html_document
+---
+
+#Multivariable Regression
+
+##Loading the data
+```{r loading_data}
+require(datasets)
+data(swiss)
+require(GGally) #this library provides some additional plots types to ggplot2
+require(ggplot2)
+
+g = ggpairs(swiss, lower = list(continuous = "smooth"), params = c(method = "looess"))
+g
+```
+
+##Fit all of the variable in the same Linear Model
+
+```{r some_lm}
+summary(lm(Fertility ~ ., data = swiss))$coefficients
+```
+
+##Interpretation of the coefficients
+For example, look at the coefficient for Agriculture. It is -0.17. We can interpret it as: **our model estimates an expected 0.17 decrease in standarized fertility for every 1% increase in percentage of males involved in agriculture in holding the remaining variables constant.***
+
+##What happen if we take only one of the variables as a predictor of the Ferlity
+For example, let's fit the model taking only the variable Agriculture as the regressor:
+
+```{r fit_one_variable}
+summary(lm(Fertility ~ Agriculture, data = swiss))$coefficients
+```
+
+Now Agriculture has a positive correlation with fertility. This conclusion might be wrong.
+
