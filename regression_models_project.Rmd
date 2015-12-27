@@ -1,0 +1,95 @@
+---
+title: "Regression Models - Project"
+author: "Saul Lugo"
+date: "December 27, 2015"
+output: pdf_document
+---
+
+#Executive Summary
+This is my executive summary
+
+#Loading the Data
+The data used for this analysis comes from the R mtcars dataset.
+
+```{r loading_data}
+data(mtcars)
+head(mtcars)
+```
+
+#Data transformation
+As this analysis is primary concern with the relationship between the cars transmission type (automatic or manual) and the fuel efficiency as miles per gallon (MPG), a factor variable named **transmission** was added to the dataset. Although the dataset already had the variable **am** that identifies each car's transmission type with 0 and 1, this new factor variable **transmission** is easier to visualize in a plot.
+
+```{r data_transformation}
+require(dplyr)
+mtcars <- mutate(mtcars, transmission = ifelse(am==0,"automatic","manual"))
+head(mtcars)
+```
+
+#Exploratory Data Analysis
+The following chart serves to visualize the posible relationship between the car transmission type and the fuel efficiency (MPG):
+
+```{r exploratory_data_analysis}
+require(ggplot2)
+p <- ggplot(mtcars, aes(x = factor(transmission), y = mpg))
+p <- p + geom_boxplot(aes(fill = factor(transmission)))
+p <- p + xlab("Transmission (manual or automatic)") + ylab("MPG (Miles Per Gallon)")
+p
+autoMean <- mean(mtcars[mtcars$transmission=="automatic",]$mpg)
+manualMean <- mean(mtcars[mtcars$transmission=="manual",]$mpg)
+autoSD <- sd(mtcars[mtcars$transmission=="automatic",]$mpg)
+manualSD <- sd(mtcars[mtcars$transmission=="manual",]$mpg)
+autoMean
+autoSD
+manualMean
+manualSD
+manualMean - autoMean
+```
+
+As the previous chart shows, there is an aparent relationship between the car transmission type and the fuel efficiency. The evidence analysed so far indicates that the manual transmission cars have in average a higher fuel efficiency as that of the automatic transmission cars. 
+
+**In average, the manual transmission cars are 7.25 MGP more efficient than the automatic transmission cars.**
+
+#Linear Models
+The first model fitted in this analysis has MPG as the outcome and the factor of transmission type as the regressor:
+```{r model_1}
+fit1 <- lm(mpg ~ transmission, data = mtcars)
+summary(fit1)
+co1 <- summary(fit1)$coefficients
+co1
+b0_1 <- co1[1,1]
+b1_1 <- co1[2,1]
+autoCI <- b0_1 + c(-1,1) * pt(.975, df=fit1$df)*co1[1,2]
+autoCI
+manualCI <- b1_1 + c(-1,1) * pt(.975, df=fit1$df)*co1[2,2]
+manualCI
+```
+
+For this model, the hypothesis of whether the model factors are 0 vs the model factors are different from 0 can be tested calculating the 95% confidence interval.
+
+As it can be observed from the confidence interval calculation of the last R code chunck, neither of the intervals include zero, so the model factors must be different from zero and the estimates of 17.15 for **$\beta{0}$** and 7.24 for **$\beta{1}$** must be correct. 
+
+##Comparison with other Linear Models
+One could think that the transmission type is not the only variable that has an influence in the fuel efficiency of a car. For instance, other variables included in the mtcars dataset might have a relevant influence on it. The following model takes in consideration also the cylinders, weight, gears and carburators of the car:
+
+```{r other_model}
+summary(lm(mpg ~ transmission + factor(cyl) + wt + gear + carb, data = mtcars))
+```
+
+Eventhough the other factors besides the transmission type has an influence in the outcome (the MPG), still the manual transmission has a better fuel efficiency in this model than that of the automatic transmission. So, it can be concluded that the transmission type is a strong predictor of the MPG.
+
+#Anwering the Question About Whether the Transmission Type Impacts the Fuel Efficient
+The Exploratory Data Analysis supports the hypothesis that the transmission type has an impact in the fuel efficiency. For instance and in average, the manual transmission cars has a higher MPG than that of the automatic transmission cars. 
+
+The manual transmission cars are 7.24 miles per gallon more efficient than the automatic transmission cars.
+
+#Residuals Calculation
+From the first model calculated with MPG as an outcome and transmission type as the regressor, the residual calculation and plotting is as follow:
+```{r residuals}
+e = resid(fit1)
+mypoints <- data.frame(transmission = mtcars$transmission, residuals = e)
+ep <- ggplot(mypoints, aes(x = transmission, y = residuals))
+ep <- ep + geom_point(aes(colour = transmission))
+ep
+```
+It can be observed that there is not a pattern in the residuals.
+
