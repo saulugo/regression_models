@@ -1,0 +1,125 @@
+---
+title: "Regression Models - Week 4"
+author: "Saul Lugo"
+date: "January 2, 2016"
+output: html_document
+---
+
+#Logistic Regression (Binary Data) Example
+
+The dataset is a collection of games outcomes for the Baltimore Ravens. The idea of the model is to predict whether of not the Ravens win given their score in the game.
+
+```{r loading_data}
+download.file("https://dl.dropboxusercontent.com/u/7710864/data/ravensData.rda"
+              , destfile="./data/ravensData.rda",method="curl")
+load("./data/ravensData.rda")
+head(ravensData)
+```
+
+As the outcome is binary, fitting a linear model would result in a poor model for predicion:
+
+```{r fitting_linar_model}
+y <- ravensData$ravenWinNum
+n <- length(y)
+x <- ravensData$ravenScore
+fit <- lm(y ~ x)
+summary(fit)
+co <- summary(fit)$coefficients
+co
+bo <- co[1,1]
+b1 <- co[2,1]
+yhat <- bo + b1 * x
+result_comparison <- cbind(y,yhat,y-yhat)
+result_comparison
+```
+
+As a linear model would be a poor model in this case, we use a Generalized Linear Model with a **Logistic Regression Model** which is more appropriate for binary or binomial outcomes:
+
+```{r logistic_regression}
+require(ggplot2)
+logRegRavens <- glm(y ~ x, family = "binomial") #the family parameter specify the distribution of the outcome
+summary(logRegRavens)
+newco <- summary(logRegRavens)$coefficients
+newco
+nbo <- newco[1,1]
+nb1 <- newco[2,1]
+newYhat <- exp(nbo + nb1*x)/(1 + exp(nbo + nb1*x))
+newYhat
+result_comparison <- cbind(newYhat,result_comparison)
+result_comparison
+logRegRavens$fitted
+result_comparison <- data.frame(result_comparison)
+result_comparison <- cbind(result_comparison,x)
+result_comparison <- data.frame(result_comparison)
+g <- ggplot(aes(x=x, y=newYhat), data=result_comparison)
+g <- g + geom_point()
+g <- g + geom_point(aes(x=x, y=yhat), data=result_comparison, col = "red")
+g <- g + xlab("Ravens Score") + ylab("Probability of Ravens Win") + ggtitle("Probability of Ravens Win vs Score")
+g
+```
+
+#Coefficients Interpretation
+
+```{r coeff_interpretation}
+exp(logRegRavens$coefficient)
+exp(confint(logRegRavens))
+```
+
+The B1 coefficient means that for each point the Ravens score the probability of winning is 11% higher.
+
+However, the confidence interval for B1 coefficient includes 1. That means that the coefficient is not statistically significant.
+
+#Poisson GLM
+
+Example with web traffic:
+
+```{r possion_glm}
+download.file("https://dl.dropboxusercontent.com/u/7710864/data/gaData.rda",destfile="./data/gaData.rda",method="curl")
+load("./data/gaData.rda")
+gaData$julian <- julian(gaData$date)
+head(gaData)
+g2 <- ggplot(aes(x = date, y = visits), data=gaData)
+g2 <- g2 + geom_point(pch=19, col="darkgrey", xlab="Date", ylab="Visits")
+g2
+```
+
+Let's fit a linear regresion line:
+
+```{r lm_line}
+lm1 <- lm(gaData$visits ~ gaData$julian)
+g2 <- ggplot(aes(x = julian, y = visits), data=gaData)
+g2 <- g2 + geom_point(pch=19, col="darkgrey", xlab="Julian Date", ylab="Visits")
+co1 <- summary(lm1)$coefficients
+g2 <- g2 + geom_abline(intercept = co1[1,1], slope = co1[2,1], col="red",lwd=1)
+g2
+```
+
+So, we can see that a linear model is not a good fit for this count data.
+
+Then, let's take the log of the outcome and fit a linear model with it:
+
+```{r lm_log_outcome}
+#here the + 1 term is to avoid taking the log of zero
+lm2 <- lm(I(log(gaData$visits + 1)) ~ gaData$julian)
+lm2
+round(exp(lm2$coefficients),3)
+```
+
+The intercept is zero, which is irrelevant in this case becase the first julian date representates Dec 31st 1970, which has not significance for our case.
+
+The B1 coefficient predicts an increase of 2% in the web traffic per date.
+
+Now, let's fit a model with a **Poisson Regression**
+
+```{r poisson_regression}
+glm1 <- glm(gaData$visits ~ gaData$julian, family = "poisson")
+glm1
+co2 <- summary(glm1)$coefficients
+co2
+exp(co2)
+plot(gaData$julian, gaData$visits, pch=19, col="darkgrey", xlab="julian", ylab = "visits")
+abline(lm1, col = "red", lwd = "3")
+lines(gaData$julian, glm1$fitted, col = "blue", lwd = "3")
+```
+
+We can see that the blue line that represents the GLM Poisson Regression model fits better the data.
